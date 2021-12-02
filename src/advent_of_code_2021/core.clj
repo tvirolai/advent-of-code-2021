@@ -1,6 +1,5 @@
-(ns advent-of-code-2021.core)
+(ns advent-of-code-2021.core
+  (:require [clojure.string :as s]))
 
-(defn foo
-  "I don't do a whole lot."
-  [x]
-  (println x "Hello, World!"))
+(defn read-input [filename]
+  (s/split (slurp (str "./inputs/" filename)) #"\n"))
