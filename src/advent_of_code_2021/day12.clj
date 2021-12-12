@@ -1,15 +1,20 @@
 (ns advent-of-code-2021.day12
   (:require [clojure.string :as s]))
 
-(def filename
-  "./inputs/day12.txt")
-
 (defn big? [cave]
   (= cave (s/upper-case cave)))
 
 (defn small-cave? [cave]
   (and (not (contains? #{"start" "end"} cave))
        (= cave (s/lower-case cave))))
+
+(defn contains-one-small-twice? [seen]
+  (let [only-small (remove (fn [cave]
+                             (or (big? cave)
+                                 (#{"start" "end"} cave))) seen)]
+    (if (empty? only-small)
+      false
+      (= 2 (apply max (vals (frequencies only-small)))))))
 
 (defrecord Instr [from to])
 
@@ -27,33 +32,9 @@
                      (update acc from conj to)))
                  {}))))
 
-(defn dfs [G a seen]
-  (cond
-    (= "end" a) 1
-    (and (not (big? a))
-         (contains? seen a)) 0
-    :else (reduce + (map #(dfs G % (conj seen a))
-                         (get G a)))))
-
-(defn path-count [filename]
-  (let [data (parse-input filename)]
-    (dfs data "start" #{})))
-
-(defn part-01 []
-  (path-count filename))
-
-;; PART 2
-
-(defn contains-one-small-twice? [seen]
-  (let [only-small (remove (fn [cave]
-                             (or (big? cave)
-                                 (#{"start" "end"} cave))) seen)]
-    (if (empty? only-small)
-      false
-      (= 2 (apply max (vals (frequencies only-small)))))))
-
-(defn dfs* [G a seen]
-  (let [revisiting-small-possible? (false? (contains-one-small-twice? seen))]
+(defn dfs [G a seen can-revisit-one-small?]
+  (let [revisiting-small-possible? (and can-revisit-one-small?
+                                        (false? (contains-one-small-twice? seen)))]
     (cond
       (= "end" a) 1
       (and (and (small-cave? a)
@@ -61,9 +42,13 @@
            (contains? (set seen) a)) 0
       (and (not (empty? seen))
            (= "start" a)) 0
-      :else (reduce + (map #(dfs* G % (conj seen a))
+      :else (reduce + (map #(dfs G % (conj seen a) can-revisit-one-small?)
                            (get G a))))))
 
+(defn part-01 []
+  (let [data (parse-input "./inputs/day12.txt")]
+    (dfs data "start" '() false)))
+
 (defn part-02 []
-  (let [data (parse-input filename)]
-    (dfs* data "start" '())))
+  (let [data (parse-input "./inputs/day12.txt")]
+    (dfs data "start" '() true)))
