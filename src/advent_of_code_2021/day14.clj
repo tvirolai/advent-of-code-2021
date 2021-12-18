@@ -43,8 +43,7 @@
       {:instrs instrs
        :counts (reduce-kv (fn [m k v]
                             (let [orig-count (get counts k)]
-                              (assoc m k (- v orig-count))
-                              ))
+                              (assoc m k (- v orig-count))))
                           {}
                           res)}
       (let [instruction (first operations)
