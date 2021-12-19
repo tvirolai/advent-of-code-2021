@@ -1,7 +1,8 @@
 (ns advent-of-code-2021.day15
-  (:require [clojure.string :as s]))
+  (:require [clojure.string :as s]
+            [clojure.data.priority-map :refer [priority-map]]))
 
-(def filename "./inputs/day15_example.txt")
+(def filename "./inputs/day15.txt")
 
 (defrecord Coord [x y])
 
@@ -103,15 +104,15 @@
        (false? (neighbor? curr node))))
 
 (defn dijkstra* [grid]
-  (let [target (lower-right-corner grid)]
-    (loop [nodes (get-all-nodes grid)]
-      (let [unvisited-nodes (filter (complement :visited?) (flatten nodes))
-            visited-nodes (filter :visited? nodes)
-            visited-count (count visited-nodes)]
+  (let [target (lower-right-corner grid)
+        nodes (get-all-nodes grid)]
+    (loop [unvisited-nodes (filter (complement :visited?) (flatten nodes))
+           visited-nodes '()]
+      (let [visited-count (count visited-nodes)]
         (when (zero? (mod visited-count 1000))
           (println (str (count visited-nodes) " / " (count nodes) " nodes visited...")))
         (if (empty? unvisited-nodes)
-          nodes
+          visited-nodes
           (let [curr-node (->> unvisited-nodes
                                (sort-by :distance <)
                                first)
@@ -126,10 +127,8 @@
                                                                         (:y curr-node))))
                                               node)))
                                         neighbors)]
-            (recur (-> rest-nodes
-                       (into updated-neighbors)
-                       (into visited-nodes)
-                       (conj (assoc curr-node :visited? true))))))))))
+            (recur (into rest-nodes updated-neighbors)
+                   (conj visited-nodes (assoc curr-node :visited? true)))))))))
 
 (defn update-cell [grid {:keys [x y] :as cell}]
   (assoc-in grid [x y] cell))
@@ -187,7 +186,7 @@
             (recur (conj res prev))))))))
 
 (defn part-01 []
-  (let [dijkstra-res (dijkstra data)
+  (let [dijkstra-res (dijkstra* data)
         {:keys [x y]} (lower-right-corner data)]
     (->> dijkstra-res
          (filter (fn [node]
