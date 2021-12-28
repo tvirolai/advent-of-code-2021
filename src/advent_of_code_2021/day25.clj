@@ -33,7 +33,7 @@
                    [value (->Coord x y)]))]
     (reduce (fn [acc [symbol coord]]
               (update acc symbol conj coord))
-               (-> state
+               (-> initial-state
                    (assoc :dim-x (count (first grid)))
                    (assoc :dim-y (count grid)))
                (reduce into '() matrix))))
@@ -67,9 +67,6 @@
            prev nil
            next-states (rest states)
            i 0]
-      (reset! debug {:i i
-                     :curr curr
-                     :prev prev})
       (if (= curr prev)
         i
         (recur (first next-states)

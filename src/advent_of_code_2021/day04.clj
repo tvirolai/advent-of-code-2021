@@ -107,8 +107,6 @@
 
 (defrecord Row2 [seen vals row square all-seen checksum])
 
-(def tila (atom ""))
-
 (defn solve-last []
   (let [{:keys [nos squares rows]} (read-input)]
     (loop [numbers nos
@@ -145,8 +143,6 @@
                  (conj all-seen curr-number)
                  (inc i)))))))
 
-(def tila (atom []))
-
 (defn solve* []
   (let [{:keys [nos squares rows]} (read-input)]
     (loop [numbers nos
@@ -165,8 +161,6 @@
                              (map :square)
                              set)
             rest-boards (remove #(full-boards (:square %)) rs)]
-        (swap! tila conj {:full (count full-row)
-                          :rest-boards (count rest-boards)})
         (if (empty? rest-boards)
           full-row
           (recur (rest numbers)
