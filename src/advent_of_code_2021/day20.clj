@@ -1,7 +1,7 @@
 (ns advent-of-code-2021.day20
   (:require [clojure.string :as s]))
 
-(def filename "./inputs/day20_example.txt")
+(def filename "./inputs/day20.txt")
 
 (def data
   (let [lines (s/split (slurp filename) #"\n")
@@ -13,7 +13,7 @@
 
 (defrecord Coord [x y])
 
-(defn get-pixel [image {:keys [x y]}]
+(defn get-pixel [image {:keys [x y] :as coord}]
   (nth (nth image y) x))
 
 (defn get-pixel-form [image {:keys [x y] :as coord}]
@@ -27,64 +27,17 @@
 
 (defrecord Padding-info [top right bottom left])
 
-(defn needs-padding? [image]
-  (let [image-width (count (first image))
-        top (take 2 image)
-        bottom (take-last 2 image)
-        left-margin (vec (for [y (range 0 (count image))]
-                           (for [x '(0 1)]
-                             (get-pixel image (->Coord x y)))))
-        right-margin (vec (for [y (range 0 (count image))]
-                            (for [x (list (- image-width 2) (dec image-width))]
-                              (get-pixel image (->Coord x y)))))
-        empty-predicate (fn [input]
-                          (pos? (get (frequencies (flatten input)) "#" 0)))]
-    (->Padding-info (empty-predicate top)
-                    (empty-predicate right-margin)
-                    (empty-predicate bottom)
-                    (empty-predicate left-margin))))
-
-#_(defn add-padding* [image]
-  (let [line-len (count (first image))
-        empty-line (vec (repeat (+ (* 2 3) line-len) "."))
-        widened-image (vec (for [line image
-                                 :let [padding (vec (repeat 3 "."))]]
-                             (into (into padding line) padding)))
-        up-and-down-padding (vec (repeat 3 empty-line))]
-    (into (into up-and-down-padding widened-image)
-          up-and-down-padding)))
-
-(defn add-padding* [image]
-  (let [line-len (count (first image))
-        empty-line (vec (repeat (+ 2 line-len) "."))
-        widened-image (vec (for [line image
-                                 :let [padding (vec (repeat 1 "."))]]
-                             (into (into padding line) padding)))
-        up-and-down-padding (vec (repeat 1 empty-line))]
-    (into (into up-and-down-padding widened-image)
-          up-and-down-padding)))
-
-(defn add-padding [image]
-  (let [{:keys [top right bottom left]} (needs-padding? image)
+(defn add-large-padding [image]
+  (let [padding-amount 100
+        padding-symbol "."
         line-len (count (first image))
-        new-line-len (cond
-                       (and left right) (+ 4 line-len)
-                       (or left right) (+ 2 line-len)
-                       :else line-len)
-        empty-line (vec (repeat new-line-len "."))
-        empty-lines (vec (repeat 2 (vec (repeat new-line-len "."))))
+        empty-line (vec (repeat (+ (* 2 padding-amount) line-len) padding-symbol))
         widened-image (vec (for [line image
-                                 :let [padding ["." "."]]]
-                             (cond
-                               (and left right) (into (into padding line) padding)
-                               left (into padding line)
-                               right (into line padding))))]
-    (cond
-      (and top bottom) (into (into [empty-line] widened-image)
-                             [empty-line])
-      top (into [empty-line] widened-image)
-      bottom (into image empty-line)
-      :else image)))
+                                 :let [padding (vec (repeat padding-amount padding-symbol))]]
+                             (into (into padding line) padding)))
+        up-and-down-padding (vec (repeat padding-amount empty-line))]
+    (into (into up-and-down-padding widened-image)
+          up-and-down-padding)))
 
 (defn in-operation-range? [image {:keys [x y]}]
   (let [y-dim (count image)
@@ -92,49 +45,43 @@
     (and (< 0 x (dec x-dim))
          (< 0 y (dec y-dim)))))
 
-(defn- print-image [image]
-  (doseq [line (map s/join image)]
-    (println line)))
+(defn invert-pixel [pixel]
+  (if (= "." pixel)
+    "#"
+    "."))
 
 (defn enhance [algorithm image]
-  (let [padded-image (add-padding image)
-        y-dim (count padded-image)
-        x-dim (count (first padded-image))]
+  (let [y-dim (count image)
+        x-dim (count (first image))]
     (vec
      (for [y (range 0 y-dim)]
        (vec
         (for [x (range 0 x-dim)
               :let [coord (->Coord x y)]]
-          (if-not (in-operation-range? padded-image coord)
-            (get-pixel padded-image coord)
-            (let [pixel-form (get-pixel-form padded-image coord)]
-              (str (nth algorithm (pixel-form->int pixel-form)))))))))))
+          (if-not (in-operation-range? image coord)
+            (invert-pixel (get-pixel image coord))
+            (let [pixel-form (get-pixel-form image coord)
+                  pixel-value (get-pixel image coord)]
+              (if (all-padding? pixel-form)
+                (get-pixel image coord)
+                (str (nth algorithm (pixel-form->int (normalize-pixel-form pixel-form)))))))))))))
 
 (defn get-pixel-val [algorithm image coord]
   (let [pixel-form (get-pixel-form image coord)
         numb (pixel-form->int pixel-form)]
-    (println numb)
     (str (nth algorithm numb))))
 
-(defn part-01* []
-  (let [{:keys [image algorithm]} data
-        images (iterate (partial enhance algorithm) image)
-        counts (frequencies (flatten (last (take 3 images))))
-        ]
-    ;; (enhance algorithm image)
-    {:images (take 3 images)
-     :count-2 (frequencies (flatten (last (take 2 images))))
-     :counts counts}))
-
-(defn part-01 []
+(defn solve [rounds]
   (let [{:keys [image algorithm]} data]
-    (loop [img image
+    (loop [img (add-large-padding image)
            i 0]
-      (println "")
-      (print-image (if (zero? i)
-                     (add-padding img)
-                     img))
-      (if (= i 2)
-        (frequencies (flatten img))
+      (if (= i rounds)
+        (get (frequencies (flatten img)) "#")
         (recur (enhance algorithm img)
                (inc i))))))
+
+(defn part-01 []
+  (solve 2))
+
+(defn part-02 []
+  (solve 50))
