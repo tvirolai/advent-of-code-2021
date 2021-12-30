@@ -13,10 +13,10 @@
 
 (defrecord Coord [x y])
 
-(defn get-pixel [image {:keys [x y] :as coord}]
+(defn get-pixel [image {:keys [x y]}]
   (nth (nth image y) x))
 
-(defn get-pixel-form [image {:keys [x y] :as coord}]
+(defn get-pixel-form [image {:keys [x y]}]
   (for [y (range (dec y) (+ 2 y))
         x (range (dec x) (+ 2 x))]
     (get-pixel image (->Coord x y))))
@@ -24,8 +24,6 @@
 (defn pixel-form->int [pixel-form]
   (let [binary (s/join (map #(if (= "." %) 0 1) pixel-form))]
     (Integer/parseInt binary 2)))
-
-(defrecord Padding-info [top right bottom left])
 
 (defn add-large-padding [image]
   (let [padding-amount 100
@@ -60,16 +58,8 @@
               :let [coord (->Coord x y)]]
           (if-not (in-operation-range? image coord)
             (invert-pixel (get-pixel image coord))
-            (let [pixel-form (get-pixel-form image coord)
-                  pixel-value (get-pixel image coord)]
-              (if (all-padding? pixel-form)
-                (get-pixel image coord)
-                (str (nth algorithm (pixel-form->int (normalize-pixel-form pixel-form)))))))))))))
-
-(defn get-pixel-val [algorithm image coord]
-  (let [pixel-form (get-pixel-form image coord)
-        numb (pixel-form->int pixel-form)]
-    (str (nth algorithm numb))))
+            (let [pixel-form (get-pixel-form image coord)]
+              (str (nth algorithm (pixel-form->int pixel-form)))))))))))
 
 (defn solve [rounds]
   (let [{:keys [image algorithm]} data]
